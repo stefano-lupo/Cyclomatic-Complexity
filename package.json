@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stefano-lupo/Cyclomatic-Complexity.git"
+    "url": "git+https://github.com/stefano-lupo/Cyclomatic-Complexity-Server.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "hhttps://github.com/stefano-lupo/Cyclomatic-Complexity/issues"
+    "url": "hhttps://github.com/stefano-lupo/Cyclomatic-Complexity-Server/issues"
   },
-  "homepage": "https://github.com/stefano-lupo/Cyclomatic-Complexity#readme",
+  "homepage": "https://github.com/stefano-lupo/Cyclomatic-Complexity-Server#readme",
   "dependencies": {
     "bcrypt-nodejs": "0.0.3",
     "body-parser": "^1.17.2",
