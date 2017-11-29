@@ -1,7 +1,8 @@
 import fetch from 'node-fetch';
 
-let availableWorkers = ['http://localhost:5001'];
+const availableWorkers = ['http://localhost:5001'];
 
+const GITHUB_TOKEN = "token dcc923fb5e2c79b65b118d7d710eeaf73ca42d48";
 const GITHUB_BASE_URL = "https://github.com";
 
 export const calculateComplexity = async (req, res) => {
@@ -22,7 +23,6 @@ export const calculateComplexity = async (req, res) => {
     return res.status(500).send(`Something bad happened`);
   })
 
-
 };
 
 
@@ -40,6 +40,16 @@ const getWorkerToCloneRepo = (worker, body) => {
     return Promise.reject(err);
   });
 };
+
+
+
+export const getWork = (req, res) => {
+  const commitSha = "0fdb905b3517c3516418a5ac2ec8da370ce6c753"; // latest commit of node-todo scotch-io
+  const file = "server.js";
+  res.send({commitSha, file});
+};
+
+
 
 async function makeRequest(endpoint, method, body) {
   const headers =  {'Content-Type': 'application/json'};
