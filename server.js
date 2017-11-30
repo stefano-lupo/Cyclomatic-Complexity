@@ -46,7 +46,7 @@ app.get('/', (req, res) => {
 
 // API endpoints
 app.post('/api/complexity', ServerController.calculateComplexity);
-app.post('/api/work', ServerController.getWork);
+app.get('/api/work', ServerController.requestWork);
 
 
 

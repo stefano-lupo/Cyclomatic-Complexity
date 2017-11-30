@@ -7,20 +7,23 @@ const availableWorkers = ['http://localhost:5001'];
 
 const GITHUB_BASE_URL = "https://api.github.com";
 
-// https://api.github.com/repos/stefano-lupo/DFS-File-System/git/trees/5f4b511df2949f58cbeda7687650b1c444db98b3
-
 
 //TODO: Make it able to handle mutliple caculateComplexity requests at a time
+const queuedRepos = new Map();
 
 /**
  * POST /api/complexity
  * body: {repoUrl, repoName, repoOwner}
+ * Calculates Cyclomatic Complexity of the specified repository
  */
 export const calculateComplexity = async (req, res) => {
   let { repoUrl, repoName, repoOwner } = req.body;
 
   // Get array of commits for this repo
   const { ok, status, response } = await makeRequest(`${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/commits`);
+
+  console.log(response);
+
 
   // Grab the sha and commit message and toss everything else
   let commits = response.map(commit => {
@@ -40,9 +43,7 @@ export const calculateComplexity = async (req, res) => {
   // Wait for all to resolve
   await Promise.all(work);
 
-  console.log(commits);
-  res.send(commits);
-  return;
+  console.log(`Files for each commit found - Notifying workers`);
 
   repoUrl = repoUrl || `${GITHUB_BASE_URL}/${repoOwner}/${repoName}`;
   const body = {repoUrl, repoName, repoOwner};
@@ -57,11 +58,18 @@ export const calculateComplexity = async (req, res) => {
   }).catch(err => {
     console.error(`Error occured: ${err}`);
     return res.status(500).send(`Something bad happened`);
-  })
+  });
 
+  // Add it to our repos
+  queuedRepos.set({repoName, repoOwner}, {commits, nextCommit: 0});
 };
 
-
+/**
+ * Gets the list of files contained in a given repository and commit
+ * @param repoOwner owner of the repository
+ * @param repoName name of the repository
+ * @param commit sha of the commit
+ */
 const getFilesFromCommit = async (repoOwner, repoName, commit) => {
 
   console.log(`Getting files for ${commit.message}`);
@@ -87,10 +95,17 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
   const resp = await makeRequest(endpoint3, "get");
   let { tree } = resp.response;
   commit.files =  tree.filter(entry => entry.type === "blob");
+  commit.nextFile = 0;
   console.log(`Set files for ${commit.message}`);
 
 };
 
+
+/**
+ * Makes a request to worker node to inform them to clone a new repository
+ * @param worker ip of worker node
+ * @param body {repoName, repoOwner, repoUrl}
+ */
 const getWorkerToCloneRepo = (worker, body) => {
   return fetch(`${worker}/job`, {
     method: "post",
@@ -107,15 +122,54 @@ const getWorkerToCloneRepo = (worker, body) => {
 };
 
 
+/**
+ * POST /api/work
+ * @param req
+ * @param res
+ */
+export const requestWork = (req, res) => {
+  // Not sure if this gives you second after or what
+  const repo = queuedRepos.values().next().value;
+  let { commits, nextCommit } = repo;
+  console.log(commits);
+  console.log(nextCommit);
 
-export const getWork = (req, res) => {
-  const commitSha = "0fdb905b3517c3516418a5ac2ec8da370ce6c753"; // latest commit of node-todo scotch-io
-  const file = "server.js";
-  res.send({commitSha, file});
+  // Get the next commit
+  const commit = commits[nextCommit];
+  let { sha, nextFile } = commit;
+  console.log(nextFile);
+
+  // Get the next file
+  const { files } = commit;
+  console.log(files);
+  const file = files[nextFile].path;
+
+  res.send({sha, file});
+
+  if(++nextFile === files.length) {
+    commit.nextFile = 0;
+    console.log(`Processed all files in commit ${nextCommit}`);
+    nextCommit++;
+    console.log(`Checking if there is a commit ${nextCommit}`);
+    if(nextCommit === commits.length) {
+        console.log(`Finished processing repo:`)
+    } else {
+      console.log(`Moving onto next commit ${nextCommit}`);
+      repo.nextCommit ++;
+    }
+  } else {
+    commit.nextFile ++;
+    console.log(`Moving onto file ${commit.nextFile}`);
+  }
 };
 
 
-
+/**
+ * Makes a request to the given endpoint
+ * @param endpoint url of endpoint
+ * @param method get/post etc
+ * @param body if using post
+ */
 async function makeRequest(endpoint, method, body) {
   const headers =  {'Content-Type': 'application/json', 'Authorization': process.env.GITHUB_KEY};
   let response;
