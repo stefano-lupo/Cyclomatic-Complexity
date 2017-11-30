@@ -1,21 +1,35 @@
 import fetch from 'node-fetch';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const availableWorkers = ['http://localhost:5001'];
 
-const GITHUB_TOKEN = "token dcc923fb5e2c79b65b118d7d710eeaf73ca42d48";
-const GITHUB_BASE_URL = "https://github.com";
+const GITHUB_BASE_URL = "https://api.github.com";
+
+// https://api.github.com/repos/stefano-lupo/DFS-File-System/git/trees/5f4b511df2949f58cbeda7687650b1c444db98b3
 
 export const calculateComplexity = async (req, res) => {
   let { repoUrl, repoName, repoOwner } = req.body;
 
+  const { ok, status, response } = await makeRequest(`${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/commits`);
+  const commits = response;
+  console.log(commits[0].sha);
+
+  const fileTrees = commits.map(commit => {
+    const sha = { commit };
+    
+  });
+
+
   repoUrl = repoUrl || `${GITHUB_BASE_URL}/${repoOwner}/${repoName}`;
   const body = {repoUrl, repoName, repoOwner};
 
-  const promises = availableWorkers.map(worker => {
+  const notifyWorkers = availableWorkers.map(worker => {
     return getWorkerToCloneRepo(worker, body);
   });
 
-  Promise.all(promises).then(results => {
+  Promise.all(notifyWorkers).then(results => {
     console.log(results);
     return res.send("done");
   }).catch(err => {
@@ -52,7 +66,8 @@ export const getWork = (req, res) => {
 
 
 async function makeRequest(endpoint, method, body) {
-  const headers =  {'Content-Type': 'application/json'};
+
+  const headers =  {'Content-Type': 'application/json', 'Authorization': process.env.GITHUB_KEY};
   let response;
   if(body) {
     response = await fetch(endpoint, {method, body: JSON.stringify(body), headers});
