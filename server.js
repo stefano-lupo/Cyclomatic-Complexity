@@ -47,6 +47,7 @@ app.get('/', (req, res) => {
 // API endpoints
 app.post('/api/complexity', ServerController.calculateComplexity);
 app.get('/api/work', ServerController.requestWork);
+app.post('/api/cyclomatic', ServerController.saveCyclomaticResult);
 
 
 
