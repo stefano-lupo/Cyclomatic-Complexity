@@ -1,10 +1,13 @@
 import Queue from 'queue-fifo';
+import moment from 'moment';
 
 export default class Repository {
   constructor(commits, repoName, repoOwner) {
 
     //TODO: Better hash function or GITHUB repo ID as no sha for repos :(
     this.hash = JSON.stringify({repoName, repoOwner});
+    this.repoOwner = repoOwner;
+    this.repoName = repoName;
 
     this.numCommitsCompleted = 0;
 
@@ -20,12 +23,17 @@ export default class Repository {
       const filesToCCMap = new Map();
       const numFilesCompleted = 0;
 
+      if(commit.files.length <= 0) {
+        console.log(`NO VALID FILES FOR ${commit.sha}`);
+        this.numCommitsCompleted++;
+      }
+
       // Build map and queue
       commit.files.forEach(file => {
         filesToCCMap.set(file.path, 0);
         this.workQueue.enqueue({repoHash: this.hash, commitSha: commit.sha, file: file.path});
       });
-      this.commitsMap.set(commit.sha, {numFilesCompleted, filesToCCMap, cc: 0})
+      this.commitsMap.set(commit.sha, {numFilesCompleted, filesToCCMap, cc: 0, date: moment(commit.date), message: commit.message})
     });
 
   }
@@ -49,17 +57,17 @@ export default class Repository {
       });
 
       commit.cc = average;
-      console.log(`Average CC of commit ${this.numCommitsCompleted} was ${average}`);
+      console.log(`Average CC of commit ${this.numCommitsCompleted} (${commitSha}) was ${average}`);
 
+      console.log(this.commitsMap.size);
       // If finished processing all commits
       if(++this.numCommitsCompleted === this.commitsMap.size) {
-        console.log(`Repository completed`);
-        // Return array of averages across the commits
-        return this.commitsMap.map(commit => {
-          return commit.cc;
-        })
+        console.log(`${this.repoOwner}/${this.repoName} completed`);
+        return true
       }
     }
+
+    return false;
   }
 
   getJob() {
@@ -73,6 +81,31 @@ export default class Repository {
     } else {
       console.log(`No more work items in repo`);
     }
+  }
+
+  getResults() {
+
+    // Return array of averages across the commits
+    const results = {
+      repoName: this.repoName,
+      repoOwner: this.repoOwner,
+      commits: []
+    };
+
+    // Convert commits map to an array
+    this.commitsMap.forEach((commit, commitSha) => {
+      console.log(`Average: ${commit.cc}`);
+      const { cc, date, message } = commit;
+      console.log(`sha: ${commitSha},  cc ${cc}, date: ${date.format("dddd, MMMM Do YYYY, h:mm:ss a")}`);
+      results.commits.push({commitSha, message, cc, date});
+    });
+
+    // Sort commits chronologically
+    results.commits.sort((c1, c2) => {
+      return c1.date.isBefore(c2.date) ? -1 : 1;
+    });
+
+    return results;
   }
 
 }

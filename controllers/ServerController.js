@@ -13,8 +13,6 @@ const availableWorkers = ['http://localhost:5001'];
 const GITHUB_BASE_URL = "https://api.github.com";
 
 
-//TODO: Make it able to handle multiple calculateComplexity requests at a time
-// const queuedRepos = new Map();
 
 const repos = new Map();
 
@@ -35,10 +33,8 @@ export const calculateComplexity = async (req, res) => {
 
   let { next } = parseLinkHeader(headers.link[0]);
 
-  // Grab the sha and commit message and toss everything else and add it to commits array
-  commits = commits.concat(response.map(commit => {
-    return {sha: commit.sha, message: commit.commit.message};
-  }));
+  // Grab the sha, commit message and date and toss everything else and add it to commits array
+  commits = commits.concat(response);
 
   console.log(`Total of ${commits.length} commits`);
 
@@ -50,19 +46,20 @@ export const calculateComplexity = async (req, res) => {
     next = parseLinkHeader(headers.link[0]).next;
 
     // Grab the sha and commit message and toss everything else and add it to commits array
-    commits = commits.concat(response.map(commit => {
-      return {sha: commit.sha, message: commit.commit.message};
-    }));
+    commits = commits.concat(response);
 
     console.log(`Appended commits: length = ${commits.length} `);
   }
 
+  commits = commits.map(commit => {
+    return {sha: commit.sha, message: commit.commit.message, date: commit.commit.author.date};
+  });
+
   console.log(`Total of ${commits.length} commits`);
 
+  // commits = commits.slice(0,5);
 
-  // Get commits in chronological order (and just first 2 for debugging)
-  // commits = commits.reverse().slice(0,2);
-  // commits = commits.slice(0,50);
+  console.log(`Processing: ${commits.length} commits`);
 
 
   // Get array of promises of files for all commits
@@ -75,15 +72,7 @@ export const calculateComplexity = async (req, res) => {
 
 
   const repo = new Repository(commits, repoName, repoOwner);
-  repos.set(repo.hash, repo);
-
-  // let workJob;
-  // while((workJob = repo.getJob())) {
-  //   console.log(workJob);
-  // }
-
-  // console.log(repo.commitsMap);
-
+  repos.set(repo.hash, {repo, res});
 
   console.log(`Files for each commit found - Notifying workers`);
 
@@ -95,14 +84,11 @@ export const calculateComplexity = async (req, res) => {
   });
 
   Promise.all(notifyWorkers).then(results => {
-    return res.send("done");
+    // return res.send("done");
   }).catch(err => {
     console.error(`Error occured: ${err}`);
     return res.status(500).send(`Something bad happened`);
   });
-
-  // Add it to our repos
-  // queuedRepos.set(repoHash, {commits, nextCommit: 0});
 
 
 };
@@ -124,17 +110,15 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
   // Get file tree for this commit by its SHA
   // Note recursive: pulls all of the files from subdirectories
   // This leaves directories in the tree (type="tree") so filter these
-  const endpoint3 = `${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/git/trees/${sha}?recursive=1`;
-  console.log(endpoint3);
-  const resp = await makeRequest(endpoint3, "get");
+  const endpoint = `${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/git/trees/${sha}?recursive=1`;
+  const resp = await makeRequest(endpoint, "get");
   let { tree } = resp.response;
 
   // Filter out only the javascript files (they are all the library can compute CC on)
   commit.files =  tree.filter(entry => {
     return entry.type === "blob" && entry.path.split('.').pop() === 'js';
   });
-  commit.nextFile = 0;
-
+  // commit.nextFile = 0;
 };
 
 
@@ -159,19 +143,13 @@ const getWorkerToCloneRepo = (worker, body) => {
 };
 
 
-
-let work = true;
-let newLine = false;
-
 /**
  * POST /api/work
  * @param req
  * @param res
  */
 export const requestWork = (req, res) => {
-
-
-  const repo = repos.values().next().value;
+  const { repo } = repos.values().next().value;
   const workJob = repo.getJob();
   if(!workJob) {
     // Get it from next repo or something
@@ -179,52 +157,7 @@ export const requestWork = (req, res) => {
   }
 
   res.send(workJob);
-
 };
-
-
-/*
-export const requestWork = (req, res) => {
-
-  if(!work){
-    return res.send({finished: true});
-  }
-
-  // Not sure if this gives you second after or what
-  const repoEntry = queuedRepos.entries().next().value;
-
-  const [ hash, repo ] = repoEntry;
-  let { commits, nextCommit } = repo;
-
-  // Get the next commit
-  const commit = commits[nextCommit];
-  let { sha, nextFile } = commit;
-
-  // Get the next file
-  const { files } = commit;
-  const file = files[nextFile].path;
-
-  res.send({repoHash: hash, commitSha: sha, file});
-
-  if(++nextFile === files.length) {
-    commit.nextFile = 0;
-    console.log(`Processed all files in commit ${nextCommit}`);
-    nextCommit++;
-    console.log(`Checking if there is a commit ${nextCommit}`);
-    if(nextCommit === commits.length) {
-      console.log(`Finished processing repo:`)
-      work = false;
-    } else {
-      console.log(`Moving onto next commit ${nextCommit}`);
-      repo.nextCommit ++;
-      newLine = true;
-    }
-  } else {
-    commit.nextFile ++;
-    console.log(`Moving onto file ${commit.nextFile}`);
-  }
-};
-*/
 
 
 /**
@@ -235,11 +168,14 @@ export const requestWork = (req, res) => {
 export const saveCyclomaticResult = async (req, res) => {
   const { repoHash, commitSha, file, cyclomatic } = req.body;
 
-  const repo = repos.get(repoHash);
-  const result = repo.saveResult(commitSha, file, cyclomatic);
+  const repoEntry = repos.get(repoHash);
+  const repo = repoEntry.repo;
+  const client = repoEntry.res;
 
-  if(result) {
-    console.log(result);
+
+
+  if(repo.saveResult(commitSha, file, cyclomatic)) {
+    client.render('pages/results', {results: repo.getResults()});
   }
 
   res.send({message: "Good boy"});

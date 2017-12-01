@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<% include ../partials/head %>
+</head>
+<body class="container">
+
+<header>
+	<% include ../partials/header %>
+</header>
+
+<main>
+
+	<h1>Results for: <%= results.repoOwner %>/<%= results.repoName %></h1>
+	<table class="table">
+		<thead>
+			<tr>
+				<th>#</th>
+				<th>Date</th>
+				<th>Commit Sha</th>
+				<th>Cyclomatic Complexity</th>
+			</tr>
+		</thead>
+		<% for(let i=0; i<results.commits.length;i++) { %>
+		<tr>
+			<td><%= i+1 %></td>
+			<td><%= results.commits[i].date.format("D/M/YYYY - h:m a") %></td>
+			<td><%= results.commits[i].message %><br><em><span class="text-muted"><%= results.commits[i].commitSha %></span></em></td>
+			<td><%= results.commits[i].cc %></td>
+		</tr>
+		<% } %>
+	</table>
+
+
+</main>
+
+<footer>
+	<% include ../partials/footer %>
+</footer>
+
+</body>
+</html>
