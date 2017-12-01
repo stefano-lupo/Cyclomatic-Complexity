@@ -12,7 +12,7 @@ import * as ServerController from './controllers/ServerController';
 const app = express();
 app.use(bodyParser.urlencoded({extended: true}));   // Parses application/x-www-form-urlencoded for req.body
 app.use(bodyParser.json());                         // Parses application/json for req.body
-app.use(morgan('dev'));
+// app.use(morgan('dev'));
 
 app.set('view engine', 'ejs');
 

@@ -1,6 +1,9 @@
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import Queue from 'queue-fifo';
+
+import Repository from '../Repository';
 
 dotenv.config();
 
@@ -11,6 +14,8 @@ const GITHUB_BASE_URL = "https://api.github.com";
 
 //TODO: Make it able to handle multiple calculateComplexity requests at a time
 const queuedRepos = new Map();
+
+const repos = new Map();
 
 /**
  * POST /api/complexity
@@ -45,6 +50,18 @@ export const calculateComplexity = async (req, res) => {
   // Wait for all to resolve
   await Promise.all(work);
 
+
+  const repo = new Repository(commits, repoName, repoOwner);
+  repos.set(repo.hash, repo);
+
+  // let workJob;
+  // while((workJob = repo.getJob())) {
+  //   console.log(workJob);
+  // }
+
+  // console.log(repo.commitsMap);
+
+
   console.log(`Files for each commit found - Notifying workers`);
 
   repoUrl = repoUrl || `${GITHUB_BASE_URL}/${repoOwner}/${repoName}`;
@@ -63,6 +80,8 @@ export const calculateComplexity = async (req, res) => {
 
   // Add it to our repos
   queuedRepos.set(repoHash, {commits, nextCommit: 0});
+
+
 };
 
 /**
@@ -77,16 +96,7 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
 
   // Extract commit sha
   const { sha } = commit;
-  // console.log(`${sha}: ${commit.commit.message}`);
 
-  // // Get commit by its SHA
-  // const endpoint = `${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/git/commits/${sha}`;
-  // // console.log(endpoint);
-  // const response2 = await makeRequest(endpoint, "get");
-  //
-  // // Extract tree SHA
-  // const treeSha = response2.response.tree.sha;
-  // // console.log(treeSha);
 
   // Get file tree for this commit by its SHA
   // Note recursive: pulls all of the files from subdirectories
@@ -101,7 +111,6 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
     return entry.type === "blob" && entry.path.split('.').pop() === 'js';
   });
   commit.nextFile = 0;
-  console.log(`Set files for ${commit.message}`);
 
 };
 
@@ -136,6 +145,22 @@ let newLine = false;
  * @param req
  * @param res
  */
+export const requestWork = (req, res) => {
+
+
+  const repo = repos.values().next().value;
+  const workJob = repo.getJob();
+  if(!workJob) {
+    // Get it from next repo or something
+    return res.send({finished: true});
+  }
+
+  res.send(workJob);
+
+};
+
+
+/*
 export const requestWork = (req, res) => {
 
   if(!work){
@@ -176,6 +201,7 @@ export const requestWork = (req, res) => {
     console.log(`Moving onto file ${commit.nextFile}`);
   }
 };
+*/
 
 
 /**
@@ -183,23 +209,12 @@ export const requestWork = (req, res) => {
  * body: {repoName, repoOwner, sha, file, cyclomatic}
  * Saves the computed cyclomatic complexity of the file
  */
-const stream = fs.createWriteStream("log.txt", {flags: 'a'});
 export const saveCyclomaticResult = async (req, res) => {
   const { repoHash, commitSha, file, cyclomatic } = req.body;
 
-  if(newLine) {
-    // stream.write("\n");
-    // stream.write(commitSha, "\n");
+  const repo = repos.get(repoHash);
+  repo.saveResult(commitSha, file, cyclomatic);
 
-    console.log("\n");
-    console.log(commitSha, "\n");
-    newLine = false;
-  }
-
-  // console.log(`For Repo: ${commitSha}`);
-  // console.log(`Cyclomatic of ${file}(${commitSha}): ${cyclomatic}`);
-  // stream.write(`${file}: ${cyclomatic}`, '\n');
- console.log(`${file}: ${cyclomatic}`, '\n');
   res.send({message: "Good boy"});
 
 };
