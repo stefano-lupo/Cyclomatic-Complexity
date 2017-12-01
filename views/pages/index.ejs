@@ -1,43 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<% include ../partials/head %>
-</head>
-<body class="container">
-
-<header>
-	<% include ../partials/header %>
-</header>
-
-<main>
-
-	<h1>Cyclomatic Complexity Calculator</h1>
-
-	<form action="/api/complexity" method="post">
-		<div class="form-group">
-			<label class="col-form-label" for="repoUrl">Enter Repo URL</label>
-			<input class="form-control" type="text" name="repoUrl" id="repoUrl" placeholder="https://github.com/stefano-lupo/DFS-File-System">
-		</div>
-		<hr>
-		<p>Or, enter the owner and the repo name.</p>
-		<div class="form-group">
-			<label class="col-form-label" for="owner">Owner</label>
-			<input class="form-control"  type="text" name="repoOwner" id="repoOwner" placeholder="stefano-lupo">
-		</div>
-		<div class="form-group">
-			<label class="col-form-label" for="owner">Repo Name</label>
-			<input class="form-control"  type="text" name="repoName" id="repoName" placeholder="DFS-File-System">
-		</div>
-		<button type="submit" class="btn btn-primary">Submit</button>
-	</form>
+	<head>
+		<% include ../partials/head %>
+	</head>
 
 
+	<body class="container">
 
-</main>
+		<header>
+			<% include ../partials/header %>
+		</header>
 
-<footer>
-	<% include ../partials/footer %>
-</footer>
+		<main>
+			<h1>Cyclomatic Complexity Calculator</h1>
 
-</body>
+			<form action="/api/complexity" method="post">
+				<div class="form-group">
+					<label class="col-form-label" for="owner">Owner</label>
+					<input class="form-control"  type="text" name="repoOwner" id="repoOwner" placeholder="stefano-lupo">
+				</div>
+				<div class="form-group">
+					<label class="col-form-label" for="owner">Repo Name</label>
+					<input class="form-control"  type="text" name="repoName" id="repoName" placeholder="DFS-File-System">
+				</div>
+				<button type="submit" class="btn btn-primary">Submit</button>
+			</form>
+		</main>
+
+		<footer>
+			<% include ../partials/footer %>
+		</footer>
+	</body>
 </html>

@@ -1,42 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<% include ../partials/head %>
-</head>
-<body class="container">
-
-<header>
-	<% include ../partials/header %>
-</header>
-
-<main>
-
-	<h1>Results for: <%= results.repoOwner %>/<%= results.repoName %></h1>
-	<table class="table">
-		<thead>
-			<tr>
-				<th>#</th>
-				<th>Date</th>
-				<th>Commit Sha</th>
-				<th>Cyclomatic Complexity</th>
-			</tr>
-		</thead>
-		<% for(let i=0; i<results.commits.length;i++) { %>
-		<tr>
-			<td><%= i+1 %></td>
-			<td><%= results.commits[i].date.format("D/M/YYYY - h:m a") %></td>
-			<td><%= results.commits[i].message %><br><em><span class="text-muted"><%= results.commits[i].commitSha %></span></em></td>
-			<td><%= results.commits[i].cc %></td>
-		</tr>
-		<% } %>
-	</table>
+	<head>
+		<% include ../partials/head %>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+	</head>
 
 
-</main>
+	<body class="container-fluid" style="max-width:1600px">
+		<header>
+			<% include ../partials/header %>
+		</header>
 
-<footer>
-	<% include ../partials/footer %>
-</footer>
+		<main>
+			<h1 class="text-center">Results for: <%= results.repoOwner %>/<%= results.repoName %></h1>
 
-</body>
+			<div class="container-fluid">
+				<canvas id="myChart"></canvas>
+			</div>
+
+			<table class="table">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Date</th>
+						<th>Commit Sha</th>
+						<th>Cyclomatic Complexity</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					<% for(let i=0; i<results.commits.length;i++) { %>
+					<tr>
+						<td><%= i+1 %></td>
+						<td><%= results.commits[i].date.format("D/M/YYYY - h:m a") %></td>
+						<td><%= results.commits[i].message %><br><em><span class="text-muted"><%= results.commits[i].commitSha %></span></em></td>
+						<td><%= results.commits[i].cc %></td>
+					</tr>
+					<% } %>
+				</tbody>
+			</table>
+		</main>
+
+		<footer>
+			<% include ../partials/footer %>
+		</footer>
+
+		<!-- Create Graph -->
+		<script type="text/javascript">
+		  const ccs = <%- JSON.stringify(results.commits.map(commit => commit.cc)) %>
+		  let i = 1;
+		  const labels = ccs.map(commit => {
+		    return i++;
+		  })
+		  const repoName = <%- JSON.stringify(results.repoName)%>
+		  const repoOwner = <%- JSON.stringify(results.repoOwner) %>
+		  const name = `${repoOwner}/${repoName}`;
+		  console.log(ccs);
+		  const ctx = document.getElementById("myChart").getContext('2d');
+		  const myChart = new Chart(ctx, {
+		    type: 'line',
+		    data: {
+		      labels,
+		      datasets: [
+		        {
+		          backgroundColor: "red",
+		          borderColor: "red",
+		          data: ccs,
+			        fill: false,
+		        }
+		      ]
+		    },
+		    options: {
+		      responsive: true,
+		      title:{
+		        display:true,
+		        text: `Cyclomatic Complexity for ${name}`
+		      },
+		      tooltips: {
+		        mode: 'index',
+		        intersect: false,
+		      },
+		      hover: {
+		        mode: 'nearest',
+		        intersect: true
+		      },
+		      scales: {
+		        xAxes: [{
+		          display: true,
+		          scaleLabel: {
+		            display: true,
+		            labelString: 'Commit'
+		          }
+		        }],
+		        yAxes: [{
+		          display: true,
+		          scaleLabel: {
+		            display: true,
+		            labelString: 'CC'
+		          }
+		        }]
+		      }
+		    }
+		  });
+		</script>
+	</body>
 </html>

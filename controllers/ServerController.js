@@ -1,20 +1,20 @@
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+dotenv.config();
 
 
 import Repository from '../Repository';
 
-dotenv.config();
 
 const availableWorkers = ['http://localhost:5001'];
 // const availableWorkers = ['http://192.168.1.17:5001'];
 // const availableWorkers = ['http://192.168.1.17:5001', 'http://localhost:5001'];
 
 const GITHUB_BASE_URL = "https://api.github.com";
-
-
-
+const N = -1;
 const repos = new Map();
+
+
 
 /**
  * POST /api/complexity
@@ -22,8 +22,9 @@ const repos = new Map();
  * Calculates Cyclomatic Complexity of the specified repository
  */
 export const calculateComplexity = async (req, res) => {
-  let { repoUrl, repoName, repoOwner } = req.body;
 
+  // Extract out repo data
+  let { repoName, repoOwner } = req.body;
   const repoHash = hash({repoName, repoOwner});
 
   // Get array of commits for this repo
@@ -36,10 +37,7 @@ export const calculateComplexity = async (req, res) => {
   // Grab the sha, commit message and date and toss everything else and add it to commits array
   commits = commits.concat(response);
 
-  console.log(`Total of ${commits.length} commits`);
-
   while(next) {
-    console.log(`Next: ${next}`);
     // Get array of commits for this repo
     const { ok, status, response, headers } = await makeRequest(next, "get");
 
@@ -47,19 +45,15 @@ export const calculateComplexity = async (req, res) => {
 
     // Grab the sha and commit message and toss everything else and add it to commits array
     commits = commits.concat(response);
-
-    console.log(`Appended commits: length = ${commits.length} `);
   }
 
   commits = commits.map(commit => {
     return {sha: commit.sha, message: commit.commit.message, date: commit.commit.author.date};
   });
 
-  console.log(`Total of ${commits.length} commits`);
 
-  // commits = commits.slice(0,5);
-
-  console.log(`Processing: ${commits.length} commits`);
+  // Limit to N commits
+  commits = N > 0 ? commits.slice(0,N) : commits;
 
 
   // Get array of promises of files for all commits
@@ -67,30 +61,31 @@ export const calculateComplexity = async (req, res) => {
     return getFilesFromCommit(repoOwner, repoName, commit);
   });
 
+
   // Wait for all to resolve
   await Promise.all(work);
 
 
+  // Create the repository and save in hash map for later
   const repo = new Repository(commits, repoName, repoOwner);
   repos.set(repo.hash, {repo, res});
 
+  // Notify all workers of this repository and get them to clone it
   console.log(`Files for each commit found - Notifying workers`);
-
-  repoUrl = repoUrl || `${GITHUB_BASE_URL}/${repoOwner}/${repoName}`;
+  const repoUrl = `${GITHUB_BASE_URL}/${repoOwner}/${repoName}`;
   const body = {repoUrl, repoName, repoHash, repoOwner};
-
   const notifyWorkers = availableWorkers.map(worker => {
     return getWorkerToCloneRepo(worker, body);
   });
 
-  Promise.all(notifyWorkers).then(results => {
-    // return res.send("done");
-  }).catch(err => {
-    console.error(`Error occured: ${err}`);
-    return res.status(500).send(`Something bad happened`);
-  });
 
-
+  // Wait for all of them to respond - Maybe not ideal
+  // Promise.all(notifyWorkers).then(results => {
+  //   // return res.send("done");
+  // }).catch(err => {
+  //   console.error(`Error occured: ${err}`);
+  //   return res.status(500).send(`Something bad happened`);
+  // });
 };
 
 /**
@@ -118,7 +113,6 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
   commit.files =  tree.filter(entry => {
     return entry.type === "blob" && entry.path.split('.').pop() === 'js';
   });
-  // commit.nextFile = 0;
 };
 
 
@@ -152,7 +146,7 @@ export const requestWork = (req, res) => {
   const { repo } = repos.values().next().value;
   const workJob = repo.getJob();
   if(!workJob) {
-    // Get it from next repo or something
+    // TODO: Get it from next repo or something
     return res.send({finished: true});
   }
 
@@ -172,14 +166,11 @@ export const saveCyclomaticResult = async (req, res) => {
   const repo = repoEntry.repo;
   const client = repoEntry.res;
 
-
-
   if(repo.saveResult(commitSha, file, cyclomatic)) {
     client.render('pages/results', {results: repo.getResults()});
   }
 
   res.send({message: "Good boy"});
-
 };
 
 
@@ -208,10 +199,20 @@ async function makeRequest(endpoint, method, body) {
   return {ok, status, headers, response}
 }
 
+
+/**
+ * TODO: Make a better hash function or use Github API's Repo ID
+ */
 function hash(obj) {
   return JSON.stringify(obj);
 }
 
+
+/**
+ * Extracts the pagination links from headers of Github API response
+ * @param header
+ * @returns {{}}
+ */
 function parseLinkHeader(header) {
   if (header.length === 0) {
     throw new Error("input must not be of zero length");
