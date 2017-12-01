@@ -19,6 +19,8 @@ export default class Repository {
       // Create Map(filename -> CC)
       const filesToCCMap = new Map();
       const numFilesCompleted = 0;
+
+      // Build map and queue
       commit.files.forEach(file => {
         filesToCCMap.set(file.path, 0);
         this.workQueue.enqueue({repoHash: this.hash, commitSha: commit.sha, file: file.path});
@@ -32,31 +34,25 @@ export default class Repository {
     const commit = this.commitsMap.get(commitSha);
     commit.filesToCCMap.set(filename, cc);
 
-    console.log(`Updated cyclomatic complexity for commit ${this.numCommitsCompleted} - ${filename} to ${cc}`)
-
     // If we have processed all files in this commit
-
-    console.log(`Num Files completed in commit: ${commit.numFilesCompleted}`);
-    console.log(`ftccmap.size = ${commit.filesToCCMap.size}`);
-
     if(++commit.numFilesCompleted === commit.filesToCCMap.size) {
-
-      console.log(`Commit ${commit.numFilesCompleted -1} finished`);
-
 
       // Compute Average across this commit
       let average = 0;
       commit.filesToCCMap.forEach(cc => {
-        average += cc;
+        console.log(`CC: ${cc}`);
+
+        // Library im using sometimes fails to parse some files, workers return -1 in that case
+        if(cc !== -1) {
+          average += cc;
+        }
       });
 
       commit.cc = average;
-
-      console.log(`Average CC of commit ${commit.numFilesCompleted -1} was ${average}`);
+      console.log(`Average CC of commit ${this.numCommitsCompleted} was ${average}`);
 
       // If finished processing all commits
       if(++this.numCommitsCompleted === this.commitsMap.size) {
-
         console.log(`Repository completed`);
         // Return array of averages across the commits
         return this.commitsMap.map(commit => {
@@ -67,7 +63,7 @@ export default class Repository {
   }
 
   getJob() {
-    console.log(`Getting Job: queue size = ${this.workQueue.size()}`);
+    // console.log(`Getting Job: queue size = ${this.workQueue.size()}`);
     if(this.workQueue.size() > 0) {
       const workItem = this.workQueue.dequeue();
 
@@ -75,11 +71,8 @@ export default class Repository {
 
       return workItem;
     } else {
-      console.log(`No more work items in repo `);
+      console.log(`No more work items in repo`);
     }
   }
 
-  get repoHash() {
-    return this.hash;
-  }
 }

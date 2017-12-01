@@ -1,19 +1,20 @@
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import fs from 'fs';
-import Queue from 'queue-fifo';
+
 
 import Repository from '../Repository';
 
 dotenv.config();
 
 const availableWorkers = ['http://localhost:5001'];
+// const availableWorkers = ['http://192.168.1.17:5001'];
+// const availableWorkers = ['http://192.168.1.17:5001', 'http://localhost:5001'];
 
 const GITHUB_BASE_URL = "https://api.github.com";
 
 
 //TODO: Make it able to handle multiple calculateComplexity requests at a time
-const queuedRepos = new Map();
+// const queuedRepos = new Map();
 
 const repos = new Map();
 
@@ -28,18 +29,40 @@ export const calculateComplexity = async (req, res) => {
   const repoHash = hash({repoName, repoOwner});
 
   // Get array of commits for this repo
-  const { ok, status, response } = await makeRequest(`${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/commits`);
+  const { ok, status, response, headers } = await makeRequest(`${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/commits`);
 
+  let commits = [];
 
-  // Grab the sha and commit message and toss everything else
-  let commits = response.map(commit => {
+  let { next } = parseLinkHeader(headers.link[0]);
+
+  // Grab the sha and commit message and toss everything else and add it to commits array
+  commits = commits.concat(response.map(commit => {
     return {sha: commit.sha, message: commit.commit.message};
-  });
+  }));
+
+  console.log(`Total of ${commits.length} commits`);
+
+  while(next) {
+    console.log(`Next: ${next}`);
+    // Get array of commits for this repo
+    const { ok, status, response, headers } = await makeRequest(next, "get");
+
+    next = parseLinkHeader(headers.link[0]).next;
+
+    // Grab the sha and commit message and toss everything else and add it to commits array
+    commits = commits.concat(response.map(commit => {
+      return {sha: commit.sha, message: commit.commit.message};
+    }));
+
+    console.log(`Appended commits: length = ${commits.length} `);
+  }
+
+  console.log(`Total of ${commits.length} commits`);
 
 
   // Get commits in chronological order (and just first 2 for debugging)
   // commits = commits.reverse().slice(0,2);
-  commits = commits.slice(0,2);
+  // commits = commits.slice(0,50);
 
 
   // Get array of promises of files for all commits
@@ -79,7 +102,7 @@ export const calculateComplexity = async (req, res) => {
   });
 
   // Add it to our repos
-  queuedRepos.set(repoHash, {commits, nextCommit: 0});
+  // queuedRepos.set(repoHash, {commits, nextCommit: 0});
 
 
 };
@@ -213,7 +236,11 @@ export const saveCyclomaticResult = async (req, res) => {
   const { repoHash, commitSha, file, cyclomatic } = req.body;
 
   const repo = repos.get(repoHash);
-  repo.saveResult(commitSha, file, cyclomatic);
+  const result = repo.saveResult(commitSha, file, cyclomatic);
+
+  if(result) {
+    console.log(result);
+  }
 
   res.send({message: "Good boy"});
 
@@ -227,7 +254,7 @@ export const saveCyclomaticResult = async (req, res) => {
  * @param body if using post
  */
 async function makeRequest(endpoint, method, body) {
-  const headers =  {'Content-Type': 'application/json', 'Authorization': process.env.GITHUB_KEY};
+  let headers =  {'Content-Type': 'application/json', 'Authorization': process.env.GITHUB_KEY};
   let response;
   if(body) {
     response = await fetch(endpoint, {method, body: JSON.stringify(body), headers});
@@ -236,15 +263,36 @@ async function makeRequest(endpoint, method, body) {
   }
 
   const { ok, status } = response;
-
+  headers = response.headers._headers;
   const contentType = response.headers.get("content-type");
   if(contentType && contentType.indexOf("application/json") !== -1) {
     response = await response.json();
   }
 
-  return {ok, status, response}
+  return {ok, status, headers, response}
 }
 
 function hash(obj) {
   return JSON.stringify(obj);
+}
+
+function parseLinkHeader(header) {
+  if (header.length === 0) {
+    throw new Error("input must not be of zero length");
+  }
+
+  // Split parts by comma
+  const parts = header.split(',');
+  let links = {};
+  // Parse each part into a named link
+  for(let i=0; i<parts.length; i++) {
+    let section = parts[i].split(';');
+    if (section.length !== 2) {
+      throw new Error("section could not be split on ';'");
+    }
+    const url = section[0].replace(/<(.*)>/, '$1').trim();
+    const name = section[1].replace(/rel="(.*)"/, '$1').trim();
+    links[name] = url;
+  }
+  return links;
 }
