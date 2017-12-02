@@ -45,21 +45,61 @@ The other key component of the Repository class is the `saveResult(commitSha, fi
 - Once the worker has successfully cloned the repository, it can begin requesting work from the master.
 
 
+## Useage
+The server provides a simple web interface in which a client can enter the owner and name of a repository they would like to examine and see the currently online worker nodes. 
+
+![The UI](assets/ui.png)
+
+
+Once the processing has completed, the client is shown a graph of the average cyclomatic complexity of each commit as well as the time ellapsed for the job.
+
+![The Results](assets/results.png)
+
+
+It also shows which workers who took part in the processing.
+
+![Workers used](assets/workers/png)
+
 
 ## Results
-Repo used: [mljs/feedforward-neural-networks](https://github.com/mljs/feedforward-neural-networks)
+The repository used for testing was [mljs/feedforward-neural-networks](https://github.com/mljs/feedforward-neural-networks). This is a relatively small repository containing 108 commits and 1.6Mb of files. 
+It is worth noting that the cyclomatic complexity library that was used [(escomplex)](https://github.com/escomplex/escomplex) can only parse javascript files and thus these are the only files examined.
 
-- 1 Worker (1 Desktop): 21.684s
-- 2 Workers (2 Desktop): 12.293s
-- 3 Workers (3 Desktop): 9.6s
-- 4 Workers (4 Desktop): 8.955s
-- 5 Workers (4 Desktop + Laptop): 7.736s
-- 6 Workers (4 Desktop + 2 Laptop): 7.527s
-- 7 Workers (4 Desktop + 3 Laptop): 6.918s
-- 8 Workers (4 Desktop + 4 Laptop): 7.219s | 6.947s | 7.069s
+It is also worth noting that the workers I had access to were of drastically different computing power. 
+The workers used were the following:
 
-- 9 Workers (4 Desktop + 4 Laptop + EC2): 6.552s
-- 10 Workers (4 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.217s
+| Worker    | CPU                         | Notes                                                    |
+|---------- |-----------------------------|--------------------------------------------------------- |
+| Desktop   | Core i7 (quad core)         | Relatively powerfull, was also running the master server.
+| Latop     | Core i5 (dual core)         | Moderately powerfull
+| EC2 Micro | 1 vCPU, 1 vCore             | Low power
+
+*Unfortunately, I could not get NPM to cooperate with the TCD Proxy and thus couldn't make use of SCSS OpenNebula*
+
+The repository was processed repeatedly with an increasing amount of nodes. 
+- I started with a single instance of a worker running on my desktop machine **(D)**, then added a second instance and a third and a fourth. This was to make use of the four cores on the CPU. 
+- I then sequentially added four more workers running on my laptop **(L)**.
+- Finally two instances of the EC2 Micro instance were added sequentially **(E)**.
+
+This produced the following results:
+
+| # Workers | Worker Machines | Elapsed Time (s) |
+|---------- |-----------------|----------------- |
+| 1         | 1D              | 21.684
+| 2         | 2D              | 12.293
+| 3         | 3D              | 9.622
+| 4         | 4D              | 8.955
+| 5         | 4D + 1L         | 7.736
+| 6         | 4D + 2L         | 7.527
+| 7         | 4D + 3L         | 6.918
+| 8         | 4D + 4L         | 6.947s
+| 9         | 4D + 4L + 1E    | 6.552s
+| 10        | 4D + 4L + 2E    | 6.217s
+
+This produced the following graph:
+
+![Time vs Nodes](assets/time_nodes_graph.png)
+
 
 - 11 Workers (5 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.41s || 6.912s
 - 12 Workers (6 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.35s
