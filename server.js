@@ -27,7 +27,7 @@ app.set('view engine', 'ejs');
 // Public pages endpoints
 app.get('/', (req, res) => {
   // Automatically looks for views folder
-  res.render('pages/index')
+  res.render('pages/index', {workers: ServerController.availableWorkers})
 });
 
 

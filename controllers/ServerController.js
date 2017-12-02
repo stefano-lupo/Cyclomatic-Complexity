@@ -6,35 +6,35 @@ dotenv.config();
 
 import Repository from '../Repository';
 
-const availableWorkers = [
+export const availableWorkers = [
   { ip: 'http://192.168.1.17:5001',
     machine: "Crappy core i5 Laptop",
-    online: true
+    online: false
   },
   {
     ip: 'http://localhost:5001',
     machine: 'Desktop core i7 workstation (port 5001)',
-    online: true
+    online: false
   },
   {
     ip: 'http://localhost:5002',
     machine: 'Desktop core i7 workstation (port 5002)',
-    online: true
+    online: false
   },
   {
     ip: 'http://localhost:5003',
     machine: 'Desktop core i7 workstation (port 5003)',
-    online: true
+    online: false
   },
   {
     ip: 'http://34.248.185.70:5001',
-    machine: 'Micro EC2 Instance - External Network to servers',
-    online: true
+    machine: 'Micro EC2 Instance (on WAN)',
+    online: false
   },
   {
     ip: 'http://192.168.1.4:5001',
     machine: 'Raspberry Pi 3',
-    online: true
+    online: false
   }
 ];
 
@@ -42,6 +42,18 @@ const GITHUB_BASE_URL = "https://api.github.com";
 const N = -1;
 const repos = new Map();
 
+availableWorkers.forEach(worker => {
+  try {
+    fetch(`${worker.ip}/ping`, {method: "get"})
+      .then(response => {
+        console.log(`Worker ${worker.ip}: ${response.ok}`);
+        worker.online =  response.ok;
+      })
+  } catch (error) {
+    worker.online = false;
+    console.log(error);
+  }
+});
 
 
 /**
@@ -142,7 +154,6 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
  * @param body {repoName, repoOwner, repoUrl}
  */
 const getWorkerToCloneRepo = (worker, body) => {
-  worker.online = true;
   return fetch(`${worker.ip}/job`, {
     method: "post",
     headers: {
@@ -150,6 +161,7 @@ const getWorkerToCloneRepo = (worker, body) => {
       'Content-Type': 'application/json'},
     body: JSON.stringify(body)
   }).then(response => {
+    worker.online = true;
     return response.json()
   }).catch(err => {
     console.error(`Error occured: ${err}`);
@@ -198,6 +210,7 @@ export const saveCyclomaticResult = async (req, res) => {
 
   res.send({message: "Good boy"});
 };
+
 
 
 /**

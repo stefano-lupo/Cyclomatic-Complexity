@@ -25,6 +25,27 @@
 				</div>
 				<button type="submit" class="btn btn-primary">Submit</button>
 			</form>
+
+			<br><br>
+			<h2>Available Workers</h2>
+			<table class="table table-bordered">
+				<thead>
+				<tr>
+					<th>#</th>
+					<th>Worker</th>
+					<th>Online</th>
+				</tr>
+				</thead>
+				<tbody>
+				<% for(let i=0; i<workers.length;i++) { %>
+				<tr>
+					<td><%= i+1 %></td>
+					<td><%= workers[i].machine %></td>
+					<td><span style="color: <%= workers[i].online ? "green" : "red"%>"><%= workers[i].online %></span></td>
+				</tr>
+				<% } %>
+				</tbody>
+			</table>
 		</main>
 
 		<footer>
