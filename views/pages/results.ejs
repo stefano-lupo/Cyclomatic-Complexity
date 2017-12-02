@@ -13,12 +13,31 @@
 
 		<main>
 			<h1 class="text-center">Results for: <%= results.repoOwner %>/<%= results.repoName %></h1>
-
+			<h4 class="text-center">Total time elapsed: <%= elapsedTime %>s</h4>
 			<div class="container-fluid">
 				<canvas id="myChart"></canvas>
 			</div>
 
-			<table class="table">
+			<br><br>
+
+			<h2 class="text-center">Worker Nodes Used</h2>
+			<div class="container">
+				<table class="table table-bordered">
+					<tbody>
+					<% for(let i=0; i<availableWorkers.length;i++) { %>
+					<tr>
+						<td><%= i+1 %></td>
+						<td><%= availableWorkers[i].machine %></td>
+					</tr>
+					<% } %>
+					</tbody>
+				</table>
+			</div>
+
+			<br><br>
+
+			<h2 class="text-center">Results</h2>
+			<table class="table table-bordered">
 				<thead>
 					<tr>
 						<th>#</th>

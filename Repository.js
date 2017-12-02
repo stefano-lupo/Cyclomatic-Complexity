@@ -24,7 +24,7 @@ export default class Repository {
       const numFilesCompleted = 0;
 
       if(commit.files.length <= 0) {
-        console.log(`NO VALID FILES FOR ${commit.sha}`);
+        console.log(`No Valid files for ${commit.sha}`);
         this.numCommitsCompleted++;
       }
 
@@ -48,8 +48,6 @@ export default class Repository {
       // Compute Average across this commit
       let average = 0;
       commit.filesToCCMap.forEach(cc => {
-        console.log(`CC: ${cc}`);
-
         // Library im using sometimes fails to parse some files, workers return -1 in that case
         if(cc !== -1) {
           average += cc;
@@ -59,7 +57,6 @@ export default class Repository {
       commit.cc = average;
       console.log(`Average CC of commit ${this.numCommitsCompleted} (${commitSha}) was ${average}`);
 
-      console.log(this.commitsMap.size);
       // If finished processing all commits
       if(++this.numCommitsCompleted === this.commitsMap.size) {
         console.log(`${this.repoOwner}/${this.repoName} completed`);
@@ -94,9 +91,7 @@ export default class Repository {
 
     // Convert commits map to an array
     this.commitsMap.forEach((commit, commitSha) => {
-      console.log(`Average: ${commit.cc}`);
       const { cc, date, message } = commit;
-      console.log(`sha: ${commitSha},  cc ${cc}, date: ${date.format("dddd, MMMM Do YYYY, h:mm:ss a")}`);
       results.commits.push({commitSha, message, cc, date});
     });
 
