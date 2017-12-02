@@ -80,6 +80,12 @@ const workers = {
       online: false
     },
 
+    // Raspberry Pi
+    {
+      ip: 'http://86.43.98.198:5009',
+      machine: 'Raspberry Pi 3',
+      online: false
+    },
 
     // Desktop
     {
@@ -120,14 +126,6 @@ const workers = {
       machine: "Crappy dual core i5 Laptop (Port 5004)",
       online: false
     },
-
-
-    // Raspberry Pi
-    {
-      ip: 'http://86.43.98.198:5009',
-      machine: 'Raspberry Pi 3',
-      online: false
-    }
   ]
 };
 
