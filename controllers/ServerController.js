@@ -8,24 +8,24 @@ import Repository from '../Repository';
 import { allWorkers } from '../config';
 
 const GITHUB_BASE_URL = "https://api.github.com";
-const NUM_NODES = process.env.NUM_WORKERS;
+const NUM_NODES = parseInt(process.env.NUM_WORKERS);
 
 const N_COMMITS_TO_PROCESS = -1;
 const repos = new Map();
 
-export const availableWorkers = allWorkers.slice(0, (NUM_NODES === -1 ? allWorkers.length : NUM_NODES));
+export const availableWorkers = NUM_NODES === -1 ? allWorkers : allWorkers.slice(0, NUM_NODES);
 
+console.log(`Running with ${availableWorkers.length} nodes`);
 availableWorkers.forEach(worker => {
-  try {
-    fetch(`${worker.ip}/ping`, {method: "get"})
-      .then(response => {
-        console.log(`Worker ${worker.ip}: ${response.ok}`);
-        worker.online =  response.ok;
-      })
-  } catch (error) {
-    worker.online = false;
-    console.log(error);
-  }
+  fetch(`${worker.ip}/ping`, {method: "get"})
+    .then(response => {
+      console.log(`Worker ${worker.ip}: ${response.ok ? "online" : "offline"}`);
+      worker.online =  response.ok;
+    })
+    .catch(err => {
+      worker.online = false;
+      console.log(`Worker ${worker.ip}: offline`);
+    });
 });
 
 
