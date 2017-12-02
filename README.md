@@ -58,7 +58,7 @@ Once the processing has completed, the client is shown a graph of the average cy
 
 It also shows which workers who took part in the processing.
 
-![Workers used](assets/workers/png)
+![Workers used](assets/workers.png)
 
 
 ## Results
