@@ -37,14 +37,14 @@ const allWorkers = [
     machine: "Crappy dual core i5 Laptop (Port 5002)",
     online: false
   },
-  // { ip: 'http://192.168.1.17:5003',
-  //   machine: "Crappy core i5 Laptop (Port 5003)",
-  //   online: false
-  // },
-  // { ip: 'http://192.168.1.17:5004',
-  //   machine: "Crappy core i5 Laptop (Port 5004)",
-  //   online: false
-  // },
+  { ip: 'http://192.168.1.17:5003',
+    machine: "Crappy dual core i5 Laptop (Port 5003)",
+    online: false
+  },
+  { ip: 'http://192.168.1.17:5004',
+    machine: "Crappy dual core i5 Laptop (Port 5004)",
+    online: false
+  },
 
 
   {
@@ -88,7 +88,7 @@ const allWorkers = [
 ];
 
 const GITHUB_BASE_URL = "https://api.github.com";
-const NUM_NODES = 8;
+const NUM_NODES = 10;
 const N_COMMITS_TO_PROCESS = -1;
 const repos = new Map();
 

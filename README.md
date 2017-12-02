@@ -144,3 +144,13 @@ This produced the following results:
 | 10        | 4D + 4L + 2E    | 11.579
 
 
+The plot of the above results superimposed on the previous results is the following:
+
+![Both Repositories Plot](assets/both_repos_graph.png)
+
+As predicted, we see a significantly steeper line that continuous to fall as we add more worker nodes. 
+Notice that the smaller *ml/feedforward-neural-networks* repository took only 21.684s to process with a single worker,
+while the larger *targos/node-ftp* repository took 91.329s. 
+
+However using all 10 nodes, both repositories ended up taking a similar
+amount of time to process, showing that the larger repository benefited hugely from parallelization. 
