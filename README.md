@@ -126,8 +126,10 @@ Best Id guess:
 Weird, T2 Micro gives 1 vCPU with 1 vCore
 
 
+In order to see these effects, the process was repeated on a much larger repository - [targos/node-ftp](https://github.com/targos/node-ftp).
 
-on targos/node-ftp
+This produced the following results:
+
 | # Workers | Worker Machines | Elapsed Time (s) |
 |---------- |-----------------|----------------- |
 | 1         | 1D              | 91.329
