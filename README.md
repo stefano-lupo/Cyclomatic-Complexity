@@ -114,17 +114,6 @@ The indicated elapsed time is the time difference between when the server notifi
 
 For a large repository (that requires a substantial amount of time for processing), the impact of the cloning phase on the overall elapsed time would be dimished as **the workers spend a greater preportion of their time processing the data** which benefits from parallelization. Thus for a larger repository we expect to see a steeper (and continuing) decrease in the graph as the overall job spends more time in a phase that **benefits** from parallelization.   
 
-- 11 Workers (5 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.41s || 6.912s
-- 12 Workers (6 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.35s
-- 13 Workers (7 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.82s
-- 14 Workers (8 Desktop + 4 Laptop + 2 EC2 (Same machine)): 6.723s
-
-Best Id guess: 
-- 4 Desktop + 2 Laptop + 2 Ec2: 5.893s || 5.926
-- 4 Desktop + 2 Laptop + 1 Ec2: 6.188s || 6.095s || 6.434s
-
-Weird, T2 Micro gives 1 vCPU with 1 vCore
-
 
 In order to see these effects, the process was repeated on a much larger repository - [targos/node-ftp](https://github.com/targos/node-ftp).
 
