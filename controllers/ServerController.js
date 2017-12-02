@@ -1,14 +1,42 @@
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import moment from 'moment';
 dotenv.config();
 
 
 import Repository from '../Repository';
 
-
-const availableWorkers = ['http://localhost:5001'];
-// const availableWorkers = ['http://192.168.1.17:5001'];
-// const availableWorkers = ['http://192.168.1.17:5001', 'http://localhost:5001'];
+const availableWorkers = [
+  { ip: 'http://192.168.1.17:5001',
+    machine: "Crappy core i5 Laptop",
+    online: true
+  },
+  {
+    ip: 'http://localhost:5001',
+    machine: 'Desktop core i7 workstation (port 5001)',
+    online: true
+  },
+  {
+    ip: 'http://localhost:5002',
+    machine: 'Desktop core i7 workstation (port 5002)',
+    online: true
+  },
+  {
+    ip: 'http://localhost:5003',
+    machine: 'Desktop core i7 workstation (port 5003)',
+    online: true
+  },
+  {
+    ip: 'http://34.248.185.70:5001',
+    machine: 'Micro EC2 Instance - External Network to servers',
+    online: true
+  },
+  {
+    ip: 'http://192.168.1.4:5001',
+    machine: 'Raspberry Pi 3',
+    online: true
+  }
+];
 
 const GITHUB_BASE_URL = "https://api.github.com";
 const N = -1;
@@ -37,6 +65,7 @@ export const calculateComplexity = async (req, res) => {
   // Grab the sha, commit message and date and toss everything else and add it to commits array
   commits = commits.concat(response);
 
+  // TODO: Write this code properly and preferably asynchronously get commits so workers can start
   while(next) {
     // Get array of commits for this repo
     const { ok, status, response, headers } = await makeRequest(next, "get");
@@ -66,26 +95,19 @@ export const calculateComplexity = async (req, res) => {
   await Promise.all(work);
 
 
-  // Create the repository and save in hash map for later
+  // Create the repository and save in hash map for later, note starting time
   const repo = new Repository(commits, repoName, repoOwner);
-  repos.set(repo.hash, {repo, res});
+  const startTime = moment();
+  repos.set(repo.hash, {repo, res, startTime});
 
   // Notify all workers of this repository and get them to clone it
   console.log(`Files for each commit found - Notifying workers`);
   const repoUrl = `${GITHUB_BASE_URL}/${repoOwner}/${repoName}`;
   const body = {repoUrl, repoName, repoHash, repoOwner};
-  const notifyWorkers = availableWorkers.map(worker => {
+  availableWorkers.map(worker => {
     return getWorkerToCloneRepo(worker, body);
   });
 
-
-  // Wait for all of them to respond - Maybe not ideal
-  // Promise.all(notifyWorkers).then(results => {
-  //   // return res.send("done");
-  // }).catch(err => {
-  //   console.error(`Error occured: ${err}`);
-  //   return res.status(500).send(`Something bad happened`);
-  // });
 };
 
 /**
@@ -95,8 +117,6 @@ export const calculateComplexity = async (req, res) => {
  * @param commit sha of the commit
  */
 const getFilesFromCommit = async (repoOwner, repoName, commit) => {
-
-  console.log(`Getting files for ${commit.message}`);
 
   // Extract commit sha
   const { sha } = commit;
@@ -122,7 +142,8 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
  * @param body {repoName, repoOwner, repoUrl}
  */
 const getWorkerToCloneRepo = (worker, body) => {
-  return fetch(`${worker}/job`, {
+  worker.online = true;
+  return fetch(`${worker.ip}/job`, {
     method: "post",
     headers: {
       'Accept': 'application/json',
@@ -132,6 +153,7 @@ const getWorkerToCloneRepo = (worker, body) => {
     return response.json()
   }).catch(err => {
     console.error(`Error occured: ${err}`);
+    worker.online = false;
     return Promise.reject(err);
   });
 };
@@ -147,7 +169,7 @@ export const requestWork = (req, res) => {
   const workJob = repo.getJob();
   if(!workJob) {
     // TODO: Get it from next repo or something
-    return res.send({finished: true});
+    return res.send({finished: true, repoHash: repo.hash});
   }
 
   res.send(workJob);
@@ -163,11 +185,15 @@ export const saveCyclomaticResult = async (req, res) => {
   const { repoHash, commitSha, file, cyclomatic } = req.body;
 
   const repoEntry = repos.get(repoHash);
-  const repo = repoEntry.repo;
+  const { repo, startTime } = repoEntry;
   const client = repoEntry.res;
 
   if(repo.saveResult(commitSha, file, cyclomatic)) {
-    client.render('pages/results', {results: repo.getResults()});
+    const finishTime = moment();
+    const elapsedTime = finishTime.diff(startTime) / 1000;
+    console.log(`ElapsedTime Time: ${elapsedTime * 1000}ms = ${elapsedTime}s`);
+    const onlineWorkers = availableWorkers.filter(worker => worker.online);
+    client.render('pages/results', {results: repo.getResults(), elapsedTime, availableWorkers: onlineWorkers});
   }
 
   res.send({message: "Good boy"});
