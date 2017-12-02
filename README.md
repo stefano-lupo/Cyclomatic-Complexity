@@ -1,7 +1,7 @@
 # Distributed Cyclomatic Complexity Calculator
 This repository contains code for the master server of a distributed cyclomatic complexity calculator. The code for the worker nodes is contained in the [Cyclomatic-Complexity-Worker](https://github.com/stefano-lupo/Cyclomatic-Complexity-Worker) repo.
 
-Stick in live link
+A [live demo](http://34.248.185.70:5000/) should *hopefully* be up and running, although the library used for calculating the cyclomatic complexity is quite tempormental about the contents of the js files it parses. There are some known to work repo suggestions on the webpage!
 
 
 ## Implementation
