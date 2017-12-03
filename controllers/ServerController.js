@@ -10,7 +10,7 @@ import { allWorkers } from '../config';
 const GITHUB_BASE_URL = "https://api.github.com";
 const NUM_NODES = parseInt(process.env.NUM_WORKERS);
 
-const N_COMMITS_TO_PROCESS = -1;
+const N_COMMITS_TO_PROCESS = 100;
 const repos = new Map();
 
 export const availableWorkers = NUM_NODES === -1 ? allWorkers : allWorkers.slice(0, NUM_NODES);
@@ -113,6 +113,10 @@ const getFilesFromCommit = async (repoOwner, repoName, commit) => {
   const endpoint = `${GITHUB_BASE_URL}/repos/${repoOwner}/${repoName}/git/trees/${sha}?recursive=1`;
   const resp = await makeRequest(endpoint, "get");
   let { tree } = resp.response;
+
+  if(!tree) {
+    console.error(resp.message);
+  }
 
   // Filter out only the javascript files (they are all the library can compute CC on)
   commit.files =  tree.filter(entry => {
