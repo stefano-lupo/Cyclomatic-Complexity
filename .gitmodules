@@ -1,0 +1,3 @@
+[submodule "Cyclomatic-Complexity-Worker"]
+	path = Cyclomatic-Complexity-Worker
+	url = https://github.com/stefano-lupo/Cyclomatic-Complexity-Worker
